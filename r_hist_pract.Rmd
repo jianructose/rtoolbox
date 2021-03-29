@@ -1,0 +1,225 @@
+---
+title: "20210328_r_histogram"
+author: "Jianru<br>"
+date: "Last compiled on `r format(Sys.time(), '%c, %Z')`"
+output: 
+  github_document
+---
+
+```{r}
+library(pacman)
+
+p_load(datasets, ggplot2, ggthemes, dplyr, grid, RColorBrewer, tidyverse)
+```
+
+```{r}
+data(airquality)
+glimpse(airquality)
+summary(airquality)
+```
+
+```{r sample n rows from a table}
+sample_frac(airquality, .1)
+
+```
+
+```{r general hist}
+p1 <- airquality %>% 
+  ggplot(aes(x = Ozone))+
+  geom_histogram()
+p1
+```
+
+```{r normalized density plot}
+
+# add normalized density plot
+p2 <- airquality %>% 
+  ggplot(aes(x=Ozone))+
+  # y as density instead of counts
+  geom_histogram(aes(y=..density..))+
+  stat_function(fun = dnorm, color=2, args = list(mean=mean(airquality$Ozone, na.rm = TRUE),
+                                                    sd=sd(airquality$Ozone, na.rm = TRUE)))
+
+p2
+```
+
+```{r count}
+# by default geom_histogram gives count as y, you can also specify it
+p3 <- airquality %>% 
+  ggplot(aes(x=Ozone))+
+  geom_histogram(aes(y=..count..))+
+  theme_economist()
+p3
+```
+
+```{r}
+# change the binwidth, larger binwidth -> coarse hist
+p4 <- airquality %>% 
+  ggplot(aes(x=Ozone))+
+  geom_histogram(aes(y=..count..), binwidth = 4)
+  
+  
+p4
+```
+
+```{r}
+
+p5 <- p4+
+  scale_x_continuous(name = 'Mean ozone in\n parts per billion')+
+  scale_y_continuous(name = "Count")
+  
+p5
+
+```
+
+```{r}
+# set axis ticks
+p6 <- p4+
+  scale_x_continuous(name = "Mean ozone in\nparts per billion",
+                     breaks = seq(0, 175, 15), 
+                     limits = c(0, 175))+
+  scale_y_continuous(name = "Count")
+
+
+p6
+```
+
+```{r}
+# add title, subtitle
+p7 <- p6+
+  labs(title = 'Frequence histogram of mean ozone', 
+       subtitle = "Source: New York State Department of Conservation")
+
+p7
+```
+
+```{r}
+
+
+barfill='tan'
+barlines=1
+
+p8 <- airquality %>% 
+  ggplot(aes(x=Ozone))+
+  geom_histogram(aes(y=..count..), binwidth = 4,color=barlines, fill=barfill)+
+  scale_x_continuous(name = "Mean ozone in\nparts per billion", 
+                     breaks = seq(0, 175, 15), 
+                     limits = c(0, 175))+
+  scale_y_continuous(name = "Count")+
+  labs(title = "Frequency histogram of mean ozone", 
+       subtitle = "Source: New York State Department of Conservation")
+
+p8
+```
+
+```{r}
+# color the count gradient
+
+p9 <- airquality %>% 
+  ggplot(aes(x=Ozone))+
+  geom_histogram(aes(fill=..count..))+
+  scale_x_continuous(name = "Mean ozone in\nparts per billion", 
+                     breaks = seq(0, 175, 15), 
+                     limits = c(0, 175))+
+  scale_y_continuous(name = "Count")+
+  labs(title = "Frequency histogram of mean ozone", 
+       subtitle = "Source: New York State Department of Conservation")+
+  scale_fill_gradient("Count", low = 'aliceblue', high = 'deepskyblue')+
+  theme_bw()
+p9
+```
+
+```{r}
+# economist theme
+windowsFonts(
+  arial = windowsFont(family = 'Arial'),
+  hand = windowsFont(family = 'Lucida Calligraphy'),
+  hel = windowsFont(family = 'Helvetica'),
+  newman = windowsFont(family = 'Times New Roman'),
+  yahei = windowsFont(family = 'Microsoft YaHei')
+)
+
+p10 <- p8+
+  theme_economist()+
+  scale_fill_economist()+
+  theme(
+    axis.line.x = element_line(size = .5, colour = 1),
+    axis.title = element_text(size = 12),
+    legend.position = 'bottom',
+    legend.direction = 'horizontal',
+    legend.box = 'horizontal',
+    legend.text = element_text(size = 10),
+    text = element_text(family = 'newman')
+  )
+
+p10
+```
+
+```{r}
+
+# add vertical line
+p11 <- p10+
+  geom_vline(xintercept = 60, size=1, linetype=2, color=222)
+
+p11
+```
+
+```{r}
+# facet into 2 months as 2 subplots
+
+airquality_trimmed <- airquality %>% 
+  filter(Month %in% c(5, 7)) %>% 
+  mutate(Month.f = month.name[Month],
+         Month.f = factor(Month.f)) %>% 
+  mutate(Month.f = fct_relevel(Month.f, 'May', 'Jul'))
+levels(airquality_trimmed$Month.f)
+
+p12 <- airquality_trimmed %>% 
+  ggplot(aes(x = Ozone))+
+  geom_histogram(aes(y = ..count..), binwidth = 10,
+                 color = barlines, fill = barfill)+
+  scale_x_continuous(name = "Mean ozone in\nparts per billion", 
+                     breaks = seq(0, 175, 25), limits = c(0, 175))+
+  scale_y_continuous(name = "Count")+
+  labs(title = "Frequency histogram of mean ozone",
+       subtitle = "Source: New York State Department of Conservation")+
+  facet_grid(.~Month.f, scales = 'free')+
+  theme_bw()+
+  theme(
+    panel.grid = element_blank()
+  )
+
+
+p12
+```
+
+```{r}
+# compare 2 months in one plot
+
+p13 <- airquality_trimmed %>% 
+  ggplot(aes(x = Ozone, fill=Month.f))+
+  geom_histogram(aes(y = ..count..), binwidth = 10, position = 'identity', alpha=.5)+
+  scale_x_continuous(name = "Mean ozone in\nparts per billion", 
+                     breaks = seq(0, 175, 25), limits = c(0, 175))+
+  scale_y_continuous(name = "Count")+
+  labs(title = "Frequency histogram of mean ozone",
+       subtitle = "Source: New York State Department of Conservation",
+       # change legend title
+       fill = 'Month')+
+  scale_fill_brewer(palette = 'Set1')+
+  # facet_grid(.~Month.f, scales = 'free')+
+  theme_bw()+
+  theme(
+    panel.grid = element_blank(),
+    legend.key = element_blank(),
+    legend.position = 'bottom',
+    text = element_text(family = 'yahei')
+  )
+
+
+p13
+```
+
+```{r}
+
+```
